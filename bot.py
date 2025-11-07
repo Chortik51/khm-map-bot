@@ -8,7 +8,7 @@ dp = Dispatcher()
 
 @dp.message()
 async def echo(msg: types.Message):
-    await msg.answer("Привет! Карта доступна по ссылке:\nhttps://твой-домен.onrender.com")
+    await msg.answer("Привет! Карта доступна по ссылке:\nhttps://khm-map-bot.onrender.com/")
 
 async def main():
     await dp.start_polling(bot)
