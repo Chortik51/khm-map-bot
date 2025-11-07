@@ -57,8 +57,8 @@ def index():
 def get_markers():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT lat, lon FROM markers")
-    markers = [{"lat": row[0], "lon": row[1]} for row in c.fetchall()]
+    c.execute("SELECT lat, lon, timestamp FROM markers")
+    markers = [{"lat": row[0], "lon": row[1], "timestamp": row[2]} for row in c.fetchall()]
     conn.close()
     return jsonify(markers)
 
@@ -81,7 +81,11 @@ def add_marker():
 async def start_cmd(msg: types.Message):
     btn = types.InlineKeyboardButton(text="🌍 Открыть карту", url="https://khm-map-bot.onrender.com")
     kb = types.InlineKeyboardMarkup(inline_keyboard=[[btn]])
-    await msg.answer("👋 Привет! Это интерактивная карта Хмельницкого.\n\nНажми кнопку ниже, чтобы открыть карту и поставить свою метку (она исчезнет через 20 минут).", reply_markup=kb)
+    await msg.answer(
+        "👋 Привет! Это интерактивная карта Хмельницкого.\n\n"
+        "Нажми кнопку ниже, чтобы открыть карту и поставить свою метку (она исчезнет через 20 минут).",
+        reply_markup=kb
+    )
 
 async def start_bot():
     print("✅ Telegram bot started polling...")

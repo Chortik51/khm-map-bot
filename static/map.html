@@ -38,7 +38,16 @@
       const res = await fetch('/api/markers');
       const data = await res.json();
       markersLayer.clearLayers();
-      data.forEach(m => L.marker([m.lat, m.lon]).addTo(markersLayer));
+
+      data.forEach(m => {
+        const date = new Date(m.timestamp * 1000);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const time = `${hours}:${minutes}`;
+        L.marker([m.lat, m.lon])
+          .addTo(markersLayer)
+          .bindTooltip(`🕒 ${time}`, { permanent: true, direction: 'top', offset: [0, -12] });
+      });
     }
 
     loadMarkers();
@@ -47,7 +56,15 @@
     // === Клик по карте добавляет метку ===
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
-      L.marker([lat, lng]).addTo(markersLayer);
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const time = `${hours}:${minutes}`;
+
+      L.marker([lat, lng])
+        .addTo(markersLayer)
+        .bindTooltip(`🕒 ${time}`, { permanent: true, direction: 'top', offset: [0, -12] });
+
       await fetch('/api/add_marker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
