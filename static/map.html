@@ -3,14 +3,27 @@
 <head>
   <meta charset="utf-8">
   <title>Карта Хмельницкого</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    html, body, #map { height: 100%; margin: 0; }
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    #notice {
+      position: absolute;
+      top: 10px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.9);
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-family: sans-serif;
+      font-size: 14px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
+  <div id="notice">📍 Коснись карты, чтобы добавить метку (удалится через 20 минут)</div>
   <div id="map"></div>
   <script>
     const map = L.map('map').setView([49.422, 26.986], 13);
@@ -18,16 +31,29 @@
       maxZoom: 19
     }).addTo(map);
 
+    let markersLayer = L.layerGroup().addTo(map);
+
+    // === Загружаем метки ===
     async function loadMarkers() {
       const res = await fetch('/api/markers');
       const data = await res.json();
-      data.forEach(m => {
-        L.marker([m.lat, m.lon]).addTo(map);
-      });
+      markersLayer.clearLayers();
+      data.forEach(m => L.marker([m.lat, m.lon]).addTo(markersLayer));
     }
 
     loadMarkers();
-    setInterval(loadMarkers, 10000); // обновляем каждые 10 сек
+    setInterval(loadMarkers, 10000); // обновление каждые 10 секунд
+
+    // === Клик по карте добавляет метку ===
+    map.on('click', async (e) => {
+      const { lat, lng } = e.latlng;
+      L.marker([lat, lng]).addTo(markersLayer);
+      await fetch('/api/add_marker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon: lng })
+      });
+    });
   </script>
 </body>
 </html>

@@ -46,7 +46,7 @@ def cleanup_old_markers():
         c.execute("DELETE FROM markers WHERE timestamp < ?", (now - EXPIRATION_SECONDS,))
         conn.commit()
         conn.close()
-        time.sleep(60)  # чистим каждые 60 сек
+        time.sleep(60)  # чистим каждую минуту
 
 # === FLASK API ===
 @app.route("/")
@@ -65,7 +65,9 @@ def get_markers():
 @app.route("/api/add_marker", methods=["POST"])
 def add_marker():
     data = request.json
-    lat, lon = data["lat"], data["lon"]
+    lat, lon = data.get("lat"), data.get("lon")
+    if lat is None or lon is None:
+        return jsonify({"error": "invalid data"}), 400
     ts = int(time.time())
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -79,21 +81,7 @@ def add_marker():
 async def start_cmd(msg: types.Message):
     btn = types.InlineKeyboardButton(text="🌍 Открыть карту", url="https://khm-map-bot.onrender.com")
     kb = types.InlineKeyboardMarkup(inline_keyboard=[[btn]])
-    await msg.answer("👋 Привет! Это интерактивная карта Хмельницкого.\n\nОтправь мне 📍 геолокацию, чтобы добавить метку на карту (на 20 минут).", reply_markup=kb)
-
-@dp.message()
-async def handle_location(msg: types.Message):
-    if msg.location:
-        lat = msg.location.latitude
-        lon = msg.location.longitude
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute("INSERT INTO markers (lat, lon, timestamp) VALUES (?, ?, ?)", (lat, lon, int(time.time())))
-        conn.commit()
-        conn.close()
-        await msg.answer("✅ Метка добавлена и будет видна на карте 20 минут.\n\n🌍 https://khm-map-bot.onrender.com")
-    else:
-        await msg.answer("📍 Отправь свою геолокацию, чтобы добавить метку на карту.")
+    await msg.answer("👋 Привет! Это интерактивная карта Хмельницкого.\n\nНажми кнопку ниже, чтобы открыть карту и поставить свою метку (она исчезнет через 20 минут).", reply_markup=kb)
 
 async def start_bot():
     print("✅ Telegram bot started polling...")
