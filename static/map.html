@@ -1,21 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
-<title>Карта Хмельницького</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  html, body, #map { height: 100%; margin: 0; }
-</style>
+  <meta charset="utf-8">
+  <title>Карта Хмельницкого</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+  </style>
 </head>
 <body>
-<div id="map"></div>
-<script>
-  var map = L.map('map').setView([49.42, 26.98], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-  }).addTo(map);
-</script>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map').setView([49.422, 26.986], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    async function loadMarkers() {
+      const res = await fetch('/api/markers');
+      const data = await res.json();
+      data.forEach(m => {
+        L.marker([m.lat, m.lon]).addTo(map);
+      });
+    }
+
+    loadMarkers();
+    setInterval(loadMarkers, 10000); // обновляем каждые 10 сек
+  </script>
 </body>
 </html>
