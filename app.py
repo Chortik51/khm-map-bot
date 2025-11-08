@@ -25,7 +25,7 @@ init_db()
 # ---------- Главная страница ----------
 @app.route("/")
 def index():
-    return send_from_directory("static", "map.html")
+    return render_template("map.html")
 
 # ---------- Получить метки ----------
 @app.route("/api/markers", methods=["POST"])
@@ -74,7 +74,7 @@ def add_marker():
     conn.close()
     return jsonify({"status": "ok"})
 
-# ---------- Удалить метку ----------
+# ---------- Удалить метку (только свою) ----------
 @app.route("/api/delete_marker", methods=["POST"])
 def delete_marker():
     data = request.json
@@ -96,7 +96,7 @@ def delete_marker():
     else:
         return jsonify({"status": "not_owner"}), 403
 
-# ---------- Автоматическая очистка старых меток ----------
+# ---------- Автоочистка старых меток ----------
 def cleanup_old():
     while True:
         conn = sqlite3.connect(DB_FILE)
