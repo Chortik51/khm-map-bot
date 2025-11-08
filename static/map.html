@@ -27,10 +27,20 @@
     .delete-btn:hover {
       background-color: #d93636;
     }
+    .legend {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="legend">🟢 ваші метки<br>🔴 інші користувачі</div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
@@ -42,14 +52,14 @@
 
     const markersLayer = L.layerGroup().addTo(map);
 
-    // ========== Унікальний ID користувача ==========
+    // ---------- Унікальний ID користувача ----------
     let userId = localStorage.getItem('user_id');
     if (!userId) {
       userId = 'user-' + Math.random().toString(36).substring(2, 12);
       localStorage.setItem('user_id', userId);
     }
 
-    // ========== Завантаження меток ==========
+    // ---------- Завантаження меток ----------
     async function loadMarkers() {
       markersLayer.clearLayers();
       const res = await fetch('/api/markers', {
@@ -64,8 +74,8 @@
         const hh = String(date.getHours()).padStart(2, '0');
         const mm = String(date.getMinutes()).padStart(2, '0');
         const time = `${hh}:${mm}`;
-
         const color = m.is_owner ? 'green' : 'red';
+
         const marker = L.circleMarker([m.lat, m.lon], {
           color,
           radius: 10,
@@ -76,11 +86,12 @@
         if (m.is_owner) {
           popupHtml += `<br><button class="delete-btn" onclick="deleteMarker(${m.id})">Видалити</button>`;
         }
+
         marker.bindPopup(popupHtml);
       });
     }
 
-    // ========== Додавання метки ==========
+    // ---------- Додавання метки ----------
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
       await fetch('/api/add_marker', {
@@ -91,4 +102,33 @@
       loadMarkers();
     });
 
-    //
+    // ---------- Видалення метки ----------
+    async function deleteMarker(id) {
+      if (!confirm("Видалити цю метку?")) return;
+      try {
+        const res = await fetch('/api/delete_marker', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id, user_id: userId })
+        });
+        const result = await res.json();
+
+        if (result.status === "deleted") {
+          alert("✅ Метка видалена.");
+          loadMarkers();
+        } else if (result.status === "not_owner") {
+          alert("❌ Ви можете видаляти лише свої метки.");
+        } else {
+          alert("⚠️ Помилка при видаленні метки.");
+        }
+      } catch (err) {
+        alert("Помилка мережі при видаленні метки.");
+        console.error(err);
+      }
+    }
+
+    loadMarkers();
+    setInterval(loadMarkers, 10000);
+  </script>
+</body>
+</html>
