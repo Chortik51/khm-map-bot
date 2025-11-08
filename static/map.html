@@ -20,12 +20,28 @@
       box-shadow: 0 0 8px rgba(0,0,0,0.2);
       z-index: 1000;
     }
+    .delete-btn {
+      background: #d9534f;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div id="notice">📍 Коснись карты, чтобы добавить метку (удалится через 20 минут)</div>
+  <div id="notice">📍 Коснись карты, чтобы добавить метку. Метка исчезнет через 20 минут. Свою можно удалить.</div>
   <div id="map"></div>
+
   <script>
+    // === УНИКАЛЬНЫЙ ID ПОЛЬЗОВАТЕЛЯ ===
+    let userId = localStorage.getItem("user_id");
+    if (!userId) {
+      userId = crypto.randomUUID();
+      localStorage.setItem("user_id", userId);
+    }
+
     const map = L.map('map').setView([49.422, 26.986], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19
@@ -33,9 +49,12 @@
 
     let markersLayer = L.layerGroup().addTo(map);
 
-    // === Загружаем метки ===
     async function loadMarkers() {
-      const res = await fetch('/api/markers');
+      const res = await fetch('/api/markers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      });
       const data = await res.json();
       markersLayer.clearLayers();
 
@@ -44,33 +63,53 @@
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         const time = `${hours}:${minutes}`;
-        L.marker([m.lat, m.lon])
-          .addTo(markersLayer)
-          .bindTooltip(`🕒 ${time}`, { permanent: true, direction: 'top', offset: [0, -12] });
+
+        const color = m.is_owner ? 'green' : 'red';
+        const marker = L.circleMarker([m.lat, m.lon], {
+          radius: 8,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.8
+        }).addTo(markersLayer);
+
+        let tooltipText = `🕒 ${time}`;
+        if (m.is_owner) {
+          const deleteBtn = `<br><button class="delete-btn" onclick="deleteMarker(${m.id})">Удалить</button>`;
+          tooltipText += deleteBtn;
+        }
+
+        marker.bindTooltip(tooltipText, { permanent: true, direction: 'top', offset: [0, -10] });
       });
     }
 
     loadMarkers();
-    setInterval(loadMarkers, 10000); // обновление каждые 10 секунд
+    setInterval(loadMarkers, 10000);
 
-    // === Клик по карте добавляет метку ===
+    // === ДОБАВЛЕНИЕ МЕТКИ ===
     map.on('click', async (e) => {
       const { lat, lng } = e.latlng;
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const time = `${hours}:${minutes}`;
-
-      L.marker([lat, lng])
-        .addTo(markersLayer)
-        .bindTooltip(`🕒 ${time}`, { permanent: true, direction: 'top', offset: [0, -12] });
-
       await fetch('/api/add_marker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lon: lng })
+        body: JSON.stringify({ lat, lon: lng, user_id: userId })
       });
+      loadMarkers();
     });
+
+    // === УДАЛЕНИЕ МЕТКИ ===
+    async function deleteMarker(id) {
+      const res = await fetch('/api/delete_marker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, user_id: userId })
+      });
+      const result = await res.json();
+      if (result.status === "deleted") {
+        loadMarkers();
+      } else if (result.status === "not_owner") {
+        alert("❌ Вы можете удалять только свои метки.");
+      }
+    }
   </script>
 </body>
 </html>
