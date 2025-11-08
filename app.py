@@ -25,7 +25,7 @@ init_db()
 # ---------- Главная страница ----------
 @app.route("/")
 def index():
-    return render_template("map.html")
+    return send_from_directory("static", "map.html")
 
 # ---------- Получить метки ----------
 @app.route("/api/markers", methods=["POST"])
